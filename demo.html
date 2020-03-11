@@ -1,0 +1,140 @@
+<!-- created by Tui Electronics, New Zealand
+  12/03/2020
+  </html-->
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Trajectory Similarity Calculation</title>
+  </head>
+  <body>
+    <button onclick="refresh()">refresh</button><br><br>
+    <canvas id="DemoCanvas" width="900" height="900" style="border: 1px solid
+      black;"></canvas>
+  </body>
+
+  <script>
+function dis(a , b) {
+  return Math.sqrt((a[0] - b[0])*(a[0] - b[0])+(a[1] - b[1])*(a[1] - b[1]));
+}
+refresh();
+function refresh() {
+  // create 2 group of 2D samples (x, y)
+  var groupALength = 80;
+  var groupBLength = 20;
+  var ratio = 2;
+  var path1 = new Array(groupALength); 
+  path1[0] = new Array(10,10); 
+
+  var path2 = new Array(groupBLength); 
+  path2[0] = new Array(10,10); 
+  // initialize path with random value
+  for (var i = 1; i < groupALength; i++) { 
+    path1[i] = new Array(path1[i-1][0]+Math.round(Math.random() * 10*ratio),path1[i-1][1]+Math.round(Math.random() * 10*ratio)); 
+    //path2[i] = new Array(path1[i][0],path1[i][1]);
+  }
+  for (var i = 1; i < groupBLength; i++) { 
+    //path2[i] = new Array(path1[i*4][0],path1[i*4][1]);
+      path2[i] = new Array(path2[i-1][0]+Math.round(Math.random() * 10*ratio)*groupALength/groupBLength,path2[i-1][1]+Math.round(Math.random() * 10*ratio)*groupALength/groupBLength); 
+  }
+  // get path length
+  var path1_length = 0.0;
+  var path2_length = 0.0;
+  for (var i = 1; i < groupALength; i++) { 
+      path1_length = path1_length + dis(path1[i-1], path1[i]);
+  }
+  for (var i = 1; i < groupBLength; i++) { 
+      path2_length = path2_length + dis(path2[i-1], path2[i]);
+  }
+  console.log(path1_length);
+  console.log(path2_length);
+
+  //draw path
+  var canvas = document.getElementById('DemoCanvas');
+  var context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = 'blue';
+  context.beginPath(); 
+  for (var i = 0; i < groupALength-1; i++) { 
+    context.moveTo(path1[i][0],path1[i][1]);
+    context.lineTo(path1[i+1][0],path1[i+1][1]);
+  }
+  context.stroke();
+  for (var i = 0; i < groupALength; i++) {
+    context.fillRect(path1[i][0],path1[i][1],3,3);
+  }
+  context.strokeStyle = 'red';
+  context.beginPath(); 
+  for (var i = 0; i < groupBLength-1; i++) { 
+    context.moveTo(path2[i][0],path2[i][1]);
+    context.lineTo(path2[i+1][0],path2[i+1][1]);
+  }
+  context.stroke();
+  for (var i = 0; i < groupBLength; i++) { 
+    context.fillRect(path2[i][0],path2[i][1],3,3);
+  }
+
+
+
+  //Merge distance algorithm
+  var MDa = new Array(groupALength);
+  var MDb = new Array(groupBLength);
+  //initialize 2D array
+  for (var i = 0; i < groupALength; i++) { 
+      MDa[i] = new Array(groupBLength); 
+      MDb[i] = new Array(groupBLength); 
+  }
+
+  //reset to 0;
+  for (var i = 0; i < groupALength; i++) { 
+      for (var j = 0; j < groupBLength; j++) { 
+          MDa[i][j] = 0.0; 
+      MDb[i][j] = 0.0; 
+      } 
+  }
+
+  //when i=0
+  for (var j = 0; j < groupBLength; j++) { 
+      MDa[0][j] = dis(path1[0], path2[j]);
+    //console.log(MDa[0][j]);
+    var L = 0.0;
+    for (var k = 1; k <= j; k++) { 
+      L = L + dis(path2[k-1], path2[k]);
+    }
+    MDa[0][j] = MDa[0][j]+L;
+    //console.log(MDa[0][j]);
+  }
+  //when j=0
+  for (var i = 0; i < groupALength; i++) { 
+      MDb[i][0] = dis(path1[i], path2[0]);
+    var L = 0.0;
+    for (var k = 1; k <= i; k++) { 
+      L = L + dis(path1[k-1], path1[k]);
+    }
+    MDb[i][0] = MDb[i][0] + L;
+  }
+  //recursion calculation
+  for (var i = 0; i < groupALength; i++) { 
+    for (var j = 0; j < groupBLength; j++) {
+      
+      if(i>0)MDa[i][j] = Math.min(MDa[i-1][j] + dis(path1[i-1], path1[i]), MDb[i-1][j] + dis(path1[i], path2[j]));
+      
+      if(j>0)MDb[i][j] = Math.min(MDb[i][j-1] + dis(path2[j-1], path2[j]), MDa[i][j-1] + dis(path1[i], path2[j])); 
+      }
+  }
+
+
+  var MDaLast = MDa[groupALength-1][groupBLength-1];
+  var MDbLast = MDb[groupALength-1][groupBLength-1];
+
+  //console.log(MDa);
+  //console.log(MDb);
+  var result = (path1_length+path2_length)/Math.min(MDaLast,MDbLast)/2*100;
+  console.log(Math.min(MDaLast,MDbLast)*2/(path1_length+path2_length));
+  
+  context.font = "30px Arial";
+  context.fillText("similarity: "+parseInt(result) +" %", 100, 50);
+
+}
+
+</script>
+</html>
